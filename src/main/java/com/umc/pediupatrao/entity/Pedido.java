@@ -14,6 +14,8 @@ public class Pedido {
     private String status;
     private int quantidade;
     private String sabor;
+    private java.time.LocalDateTime dataPedido;
+    private Double valorTotal;
 
     public String getId() {
         return id;
@@ -61,6 +63,22 @@ public class Pedido {
 
     public void setSabor(String sabor) {
         this.sabor = sabor;
+    }
+
+    public java.time.LocalDateTime getDataPedido() {
+        return dataPedido;
+    }
+
+    public void setDataPedido(java.time.LocalDateTime dataPedido) {
+        this.dataPedido = dataPedido;
+    }
+
+    public Double getValorTotal() {
+        return valorTotal;
+    }
+
+    public void setValorTotal(Double valorTotal) {
+        this.valorTotal = valorTotal;
     }
     
     
