@@ -27,9 +27,12 @@ public class DashboardService {
         List<Pedido> todosPedidos = pedidoRepository.findAll();
         
         List<Pedido> pedidos = todosPedidos.stream()
-                .filter(p -> p.getDataPedido() != null)
-                .filter(p -> (inicio == null || !p.getDataPedido().isBefore(inicio)) &&
-                             (fim == null || !p.getDataPedido().isAfter(fim)))
+                .filter(p -> p.getDataEntrada() != null || p.getDataPedido() != null)
+                .filter(p -> {
+                    LocalDateTime data = p.getDataEntrada() != null ? p.getDataEntrada() : p.getDataPedido();
+                    return (inicio == null || !data.isBefore(inicio)) &&
+                           (fim == null || !data.isAfter(fim));
+                })
                 .collect(Collectors.toList());
 
         // RF01 Indicadores gerais
@@ -48,16 +51,24 @@ public class DashboardService {
         // RF02 Análise de vendas (vendas por dia)
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         Map<String, Double> vendasPorDia = pedidos.stream()
-                .filter(p -> p.getDataPedido() != null && p.getValorTotal() != null)
+                .filter(p -> (p.getDataEntrada() != null || p.getDataPedido() != null) && p.getValorTotal() != null)
                 .collect(Collectors.groupingBy(
-                        p -> p.getDataPedido().format(formatter),
+                        p -> (p.getDataEntrada() != null ? p.getDataEntrada() : p.getDataPedido()).format(formatter),
                         Collectors.summingDouble(Pedido::getValorTotal)
                 ));
 
         // RF04 Produtos mais vendidos
         List<ProdutoRankingDTO> ranking = pedidos.stream()
-                .filter(p -> p.getSabor() != null)
-                .collect(Collectors.groupingBy(Pedido::getSabor, Collectors.summingLong(Pedido::getQuantidade)))
+                .flatMap(p -> {
+                    if (p.getItens() != null && !p.getItens().isEmpty()) {
+                        return p.getItens().stream()
+                                .map(item -> new ProdutoRankingDTO(item.getNomeProduto(), (long) item.getQuantidade()));
+                    } else if (p.getSabor() != null) {
+                        return java.util.stream.Stream.of(new ProdutoRankingDTO(p.getSabor(), (long) p.getQuantidade()));
+                    }
+                    return java.util.stream.Stream.empty();
+                })
+                .collect(Collectors.groupingBy(ProdutoRankingDTO::nome, Collectors.summingLong(ProdutoRankingDTO::quantidade)))
                 .entrySet().stream()
                 .map(entry -> new ProdutoRankingDTO(entry.getKey(), entry.getValue()))
                 .sorted((a, b) -> Long.compare(b.quantidade(), a.quantidade()))
@@ -67,9 +78,11 @@ public class DashboardService {
         // Pedidos recentes
         List<Pedido> recentes = todosPedidos.stream()
                 .sorted((a, b) -> {
-                    if (a.getDataPedido() == null) return 1;
-                    if (b.getDataPedido() == null) return -1;
-                    return b.getDataPedido().compareTo(a.getDataPedido());
+                    LocalDateTime dataA = a.getDataEntrada() != null ? a.getDataEntrada() : a.getDataPedido();
+                    LocalDateTime dataB = b.getDataEntrada() != null ? b.getDataEntrada() : b.getDataPedido();
+                    if (dataA == null) return 1;
+                    if (dataB == null) return -1;
+                    return dataB.compareTo(dataA);
                 })
                 .limit(10)
                 .collect(Collectors.toList());

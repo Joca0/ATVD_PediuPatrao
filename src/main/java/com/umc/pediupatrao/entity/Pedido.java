@@ -1,85 +1,110 @@
 package com.umc.pediupatrao.entity;
 
-import jakarta.persistence.Entity;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 @Document(collection = "pedidos")
-@Entity
 public class Pedido {
+
     @Id
     private String id;
+
     private String clienteId;
-    private String tipoPizza;
+
+    // Itens do pedido
+    private List<ItemPedido> itens = new ArrayList<>();
+
+    // Status do fluxo: RECEBIDO, EM_PREPARACAO, PRONTO, SAIU_PARA_ENTREGA, RETIRADO, FINALIZADO, CANCELADO
     private String status;
-    private int quantidade;
+
+    // Valores calculados no servidor
+    private Double valorBruto;    // soma dos itens sem desconto
+    private Double desconto;      // percentual (ex: 10.0 = 10%)
+    private Double valorTotal;    // valorBruto * (1 - desconto/100)
+
+    // Datas e responsáveis
+    private LocalDateTime dataEntrada;    // quando o pedido foi registrado (RECEBIDO)
+    private LocalDateTime dataSaida;      // quando saiu para entrega ou foi retirado
+    private String responsavelRegistro;   // usuário que criou o pedido
+    private String responsavelSaida;      // usuário que registrou a saída
+
+    // Cancelamento
+    private String motivoCancelamento;
+    private String responsavelCancelamento;
+    private LocalDateTime dataCancelamento;
+
+    // Mantido para compatibilidade com dados antigos
+    private String tipoPizza;
     private String sabor;
-    private java.time.LocalDateTime dataPedido;
-    private Double valorTotal;
+    private int quantidade;
+    private LocalDateTime dataPedido;
 
-    public String getId() {
-        return id;
+    // Calcula valorBruto e valorTotal a partir dos itens e desconto
+    public void calcularTotal() {
+        this.valorBruto = itens == null ? 0.0 :
+                itens.stream().mapToDouble(ItemPedido::getSubtotal).sum();
+        double pct = (this.desconto != null && this.desconto > 0) ? this.desconto : 0.0;
+        this.valorTotal = this.valorBruto * (1.0 - pct / 100.0);
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
+    // ---- Getters e Setters ----
 
-    public String getClienteId() {
-        return clienteId;
-    }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
 
-    public void setClienteId(String clienteId) {
-        this.clienteId = clienteId;
-    }
+    public String getClienteId() { return clienteId; }
+    public void setClienteId(String clienteId) { this.clienteId = clienteId; }
 
-    public String getTipoPizza() {
-        return tipoPizza;
-    }
+    public List<ItemPedido> getItens() { return itens; }
+    public void setItens(List<ItemPedido> itens) { this.itens = itens; }
 
-    public void setTipoPizza(String tipoPizza) {
-        this.tipoPizza = tipoPizza;
-    }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
-    public String getStatus() {
-        return status;
-    }
+    public Double getValorBruto() { return valorBruto; }
+    public void setValorBruto(Double valorBruto) { this.valorBruto = valorBruto; }
 
-    public void setStatus(String status) {
-        this.status = status;
-    }
+    public Double getDesconto() { return desconto; }
+    public void setDesconto(Double desconto) { this.desconto = desconto; }
 
-    public int getQuantidade() {
-        return quantidade;
-    }
+    public Double getValorTotal() { return valorTotal; }
+    public void setValorTotal(Double valorTotal) { this.valorTotal = valorTotal; }
 
-    public void setQuantidade(int quantidade) {
-        this.quantidade = quantidade;
-    }
+    public LocalDateTime getDataEntrada() { return dataEntrada; }
+    public void setDataEntrada(LocalDateTime dataEntrada) { this.dataEntrada = dataEntrada; }
 
-    public String getSabor() {
-        return sabor;
-    }
+    public LocalDateTime getDataSaida() { return dataSaida; }
+    public void setDataSaida(LocalDateTime dataSaida) { this.dataSaida = dataSaida; }
 
-    public void setSabor(String sabor) {
-        this.sabor = sabor;
-    }
+    public String getResponsavelRegistro() { return responsavelRegistro; }
+    public void setResponsavelRegistro(String responsavelRegistro) { this.responsavelRegistro = responsavelRegistro; }
 
-    public java.time.LocalDateTime getDataPedido() {
-        return dataPedido;
-    }
+    public String getResponsavelSaida() { return responsavelSaida; }
+    public void setResponsavelSaida(String responsavelSaida) { this.responsavelSaida = responsavelSaida; }
 
-    public void setDataPedido(java.time.LocalDateTime dataPedido) {
-        this.dataPedido = dataPedido;
-    }
+    public String getMotivoCancelamento() { return motivoCancelamento; }
+    public void setMotivoCancelamento(String motivoCancelamento) { this.motivoCancelamento = motivoCancelamento; }
 
-    public Double getValorTotal() {
-        return valorTotal;
-    }
+    public String getResponsavelCancelamento() { return responsavelCancelamento; }
+    public void setResponsavelCancelamento(String responsavelCancelamento) { this.responsavelCancelamento = responsavelCancelamento; }
 
-    public void setValorTotal(Double valorTotal) {
-        this.valorTotal = valorTotal;
-    }
-    
-    
+    public LocalDateTime getDataCancelamento() { return dataCancelamento; }
+    public void setDataCancelamento(LocalDateTime dataCancelamento) { this.dataCancelamento = dataCancelamento; }
+
+    // Compatibilidade com dados antigos
+    public String getTipoPizza() { return tipoPizza; }
+    public void setTipoPizza(String tipoPizza) { this.tipoPizza = tipoPizza; }
+
+    public String getSabor() { return sabor; }
+    public void setSabor(String sabor) { this.sabor = sabor; }
+
+    public int getQuantidade() { return quantidade; }
+    public void setQuantidade(int quantidade) { this.quantidade = quantidade; }
+
+    public LocalDateTime getDataPedido() { return dataPedido; }
+    public void setDataPedido(LocalDateTime dataPedido) { this.dataPedido = dataPedido; }
 }
