@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold mb-0">
+                <i class="bi bi-speedometer2 me-2 text-primary"></i>Dashboard
+            </h2>
+            <div class="d-flex gap-2">
+                <input type="date" id="dataInicio" class="form-control" placeholder="Início">
+                <input type="date" id="dataFim" class="form-control" placeholder="Fim">
+                <button class="btn btn-primary" onclick="atualizarDashboard()">
+                    <i class="bi bi-filter"></i> Filtrar
+                </button>
+            </div>
+        </div>
+
+        <!-- RF01 Indicadores Gerais -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 bg-primary text-white">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-bag-check me-2"></i>Total de Pedidos</h5>
+                        <h2 class="fw-bold" id="indicadorTotalPedidos">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 bg-success text-white">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-currency-dollar me-2"></i>Receita Total</h5>
+                        <h2 class="fw-bold" id="indicadorReceitaTotal">R$ 0,00</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 bg-info text-white">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-people me-2"></i>Total de Clientes</h5>
+                        <h2 class="fw-bold" id="indicadorTotalClientes">0</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <!-- RF02 Análise de Vendas (Gráfico) -->
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0 fw-bold">Vendas por Período</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="graficoVendas" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+            <!-- RF03 Situação dos Pedidos -->
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0 fw-bold">Status dos Pedidos</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="graficoStatus" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- RF04 Produtos Mais Vendidos -->
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0 fw-bold">Top 5 Sabores</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Sabor</th>
+                                    <th class="text-center">Qtd. Vendida</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaProdutosVendidos">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- Pedidos Recentes -->
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0 fw-bold">Pedidos Recentes</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">ID</th>
+                                    <th>Status</th>
+                                    <th class="text-end pe-3">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaPedidosRecentes">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script th:inline="javascript">
+        let chartVendas = null;
+        let chartStatus = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            atualizarDashboard();
+        });
+
+        async function atualizarDashboard() {
+            const indicadorPedidos = document.getElementById('indicadorTotalPedidos');
+            indicadorPedidos.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+            const inicio = document.getElementById('dataInicio').value;
+            const fim = document.getElementById('dataFim').value;
+            
+            let url = '/api/dashboard';
+            const params = new URLSearchParams();
+            if (inicio) params.append('inicio', inicio + 'T00:00:00');
+            if (fim) params.append('fim', fim + 'T23:59:59');
+            
+            if (params.toString()) {
+                url += '?' + params.toString();
+            }
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                renderIndicadores(data);
+                renderGraficoVendas(data.vendasPorDia);
+                renderGraficoStatus(data.pedidosPorStatus);
+                renderTabelaProdutos(data.produtosMaisVendidos);
+                renderTabelaPedidos(data.pedidosRecentes);
+                
+            } catch (error) {
+                console.error('Erro ao buscar dados do dashboard:', error);
+            }
+        }
+
+        function renderIndicadores(data) {
+            document.getElementById('indicadorTotalPedidos').innerText = data.totalPedidos;
+            document.getElementById('indicadorReceitaTotal').innerText = 
+                new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.receitaTotal);
+            document.getElementById('indicadorTotalClientes').innerText = data.totalClientes;
+        }
+
+        function renderGraficoVendas(vendasPorDia) {
+            const ctx = document.getElementById('graficoVendas').getContext('2d');
+            
+            const labels = Object.keys(vendasPorDia).sort();
+            const values = labels.map(label => vendasPorDia[label]);
+
+            if (chartVendas) chartVendas.destroy();
+
+            chartVendas = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Vendas (R$)',
+                        data: values,
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        function renderGraficoStatus(pedidosPorStatus) {
+            const ctx = document.getElementById('graficoStatus').getContext('2d');
+            
+            const labels = Object.keys(pedidosPorStatus);
+            const values = Object.values(pedidosPorStatus);
+
+            if (chartStatus) chartStatus.destroy();
+
+            chartStatus = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: [
+                            '#ffc107', // Pendente / RECEBIDO
+                            '#0dcaf0', // Em Preparo / EM_PREPARACAO
+                            '#0d6efd', // A Caminho / SAIU_PARA_ENTREGA / PRONTO
+                            '#198754', // Entregue / FINALIZADO
+                            '#dc3545', // Cancelado
+                            '#6c757d'  // Outros
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderTabelaProdutos(produtos) {
+            const tbody = document.getElementById('tabelaProdutosVendidos');
+            tbody.innerHTML = '';
+            
+            if (produtos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-3">Nenhum dado disponível</td></tr>';
+                return;
+            }
+
+            produtos.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="ps-3">${p.nome}</td>
+                    <td class="text-center"><span class="badge bg-secondary">${p.quantidade}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderTabelaPedidos(pedidos) {
+            const tbody = document.getElementById('tabelaPedidosRecentes');
+            tbody.innerHTML = '';
+            
+            if (pedidos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Nenhum pedido recente</td></tr>';
+                return;
+            }
+
+            pedidos.forEach(p => {
+                const tr = document.createElement('tr');
+                const valor = p.valorTotal ? p.valorTotal.toFixed(2) : '0.00';
+                tr.innerHTML = `
+                    <td class="ps-3">#${p.id ? p.id.substring(0, 8) : '---'}</td>
+                    <td><span class="badge ${getStatusBadgeClass(p.status)}">${p.status || 'Pendente'}</span></td>
+                    <td class="text-end pe-3">R$ ${valor}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function getStatusBadgeClass(status) {
+            switch(status) {
+                case 'Pendente':
+                case 'RECEBIDO': return 'bg-warning text-dark';
+                case 'Em Preparo':
+                case 'EM_PREPARACAO': return 'bg-info';
+                case 'PRONTO':
+                case 'A Caminho':
+                case 'SAIU_PARA_ENTREGA': return 'bg-primary';
+                case 'Entregue':
+                case 'RETIRADO':
+                case 'FINALIZADO': return 'bg-success';
+                case 'Cancelado':
+                case 'CANCELADO': return 'bg-danger';
+                default: return 'bg-secondary';
+            }
+        }
+    </script>
+</div>
+</body>
+</html>

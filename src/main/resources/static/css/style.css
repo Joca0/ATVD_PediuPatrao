@@ -32,6 +32,11 @@ body {
     display: block;
 }
 
+#sidebar a.active {
+    background-color: #0d6efd;
+    color: white;
+}
+
 #content {
     flex-grow: 1;
     padding: 20px;

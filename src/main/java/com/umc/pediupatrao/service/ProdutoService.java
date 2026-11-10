@@ -20,24 +20,29 @@ public class ProdutoService {
         return produtoRepository.findAll();
     }
 
-    // Método para excluir cliente
+    public java.util.Optional<Produto> buscarPorId(String id) {
+        return produtoRepository.findById(id);
+    }
+
+    // Método para excluir produto
     public void excluir(String id) {
         produtoRepository.deleteById(id);
     }
 
 
-    // Método para salvar um novo cliente ou atualizar um cliente existente
+    // Método para salvar um novo produto ou atualizar um produto existente
     public Produto salvar(Produto produto) {
-        // Se o cliente não tem ID (novo cliente), salva como novo
-        if (produto.getId() == null) {
-            return produtoRepository.save(produto);  // Cria um novo cliente
-        } // Se já tem ID (cliente existente), atualiza
+        // Se o produto não tem ID (novo produto), salva como novo
+        if (produto.getId() == null || produto.getId().isBlank()) {
+            produto.setId(null); // Garante que o ID seja nulo para o MongoDB gerar um novo
+            return produtoRepository.save(produto);  // Cria um novo produto
+        } // Se já tem ID (produto existente), atualiza
         else {
-            // Verifica se o cliente existe antes de atualizar
+            // Verifica se o produto existe antes de atualizar
             if (produtoRepository.existsById(produto.getId())) {
-                return produtoRepository.save(produto);  // Atualiza o cliente existente
+                return produtoRepository.save(produto);  // Atualiza o produto existente
             } else {
-                throw new IllegalArgumentException("Cliente não encontrado para atualização.");
+                throw new IllegalArgumentException("Produto não encontrado para atualização.");
             }
         }
     }

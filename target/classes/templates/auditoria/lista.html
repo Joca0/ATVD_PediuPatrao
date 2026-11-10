@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Auditoria</title></head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">
+            <i class="bi bi-shield-check me-2 text-primary"></i>Registros de Auditoria
+        </h2>
+        <form class="d-flex gap-2" method="get" action="/auditoria">
+            <input type="text" name="entidadeId" class="form-control form-control-sm"
+                   placeholder="Filtrar por ID da entidade"
+                   th:value="${filtro}"/>
+            <button type="submit" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-search"></i>
+            </button>
+            <a href="/auditoria" class="btn btn-sm btn-outline-secondary" th:if="${filtro != null}">
+                <i class="bi bi-x-lg"></i>
+            </a>
+        </form>
+    </div>
+
+    <div class="alert alert-info" th:if="${filtro != null}">
+        Exibindo registros para entidade: <strong th:text="${filtro}"></strong>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-sm align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="ps-3">Data/Hora</th>
+                            <th>Usuário</th>
+                            <th>Perfil</th>
+                            <th>Operação</th>
+                            <th>Entidade</th>
+                            <th>Campo</th>
+                            <th>Valor Anterior</th>
+                            <th>Novo Valor</th>
+                            <th class="pe-3">Justificativa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(registros)}">
+                            <td colspan="9" class="text-center text-muted py-5">
+                                <i class="bi bi-inbox fs-3 d-block mb-2"></i>Nenhum registro de auditoria encontrado.
+                            </td>
+                        </tr>
+                        <tr th:each="r : ${registros}">
+                            <td class="ps-3 text-nowrap small"
+                                th:text="${r.dataHora != null ? #temporals.format(r.dataHora,'dd/MM/yyyy HH:mm') : '-'}">
+                            </td>
+                            <td class="fw-medium small" th:text="${r.usuario ?: '-'}"></td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${r.perfilUsuario == 'ADMIN'} ? 'bg-danger' :
+                                                      (${r.perfilUsuario == 'GERENTE'} ? 'bg-warning text-dark' : 'bg-secondary')"
+                                      th:text="${r.perfilUsuario ?: '-'}">
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info text-dark small" th:text="${r.operacao ?: '-'}"></span>
+                            </td>
+                            <td class="small">
+                                <span th:text="${r.entidade ?: '-'}"></span>
+                                <br/>
+                                <span class="text-muted font-monospace" style="font-size:0.7rem"
+                                      th:text="${r.entidadeId != null ? #strings.abbreviate(r.entidadeId,12) : ''}">
+                                </span>
+                            </td>
+                            <td class="small" th:text="${r.campo ?: '-'}"></td>
+                            <td class="small text-muted" th:text="${r.valorAnterior ?: '-'}"></td>
+                            <td class="small text-success fw-medium" th:text="${r.valorNovo ?: '-'}"></td>
+                            <td class="pe-3 small text-muted" th:text="${r.justificativa ?: '-'}"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer text-muted small" th:if="${!#lists.isEmpty(registros)}">
+            Total: <strong th:text="${#lists.size(registros)}"></strong> registro(s)
+        </div>
+    </div>
+</div>
+</body>
+</html>
